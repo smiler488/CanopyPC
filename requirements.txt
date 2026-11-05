@@ -1,7 +1,8 @@
-open3d>=0.15.0
-numpy>=1.20.0
-matplotlib>=3.4.0
-scikit-learn>=0.24.0
-scipy>=1.6.0
-shapely>=1.8.0
-CSF>=1.1.0
+numpy>=1.21
+scipy>=1.8
+scikit-learn>=1.1
+matplotlib>=3.6
+open3d>=0.17
+cloth-simulation-filter>=1.1.5
+# only needed by scripts/quick_row_split.py
+opencv-python>=4.6
