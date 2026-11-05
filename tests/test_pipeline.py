@@ -54,3 +54,20 @@ def test_end_to_end(tmp_path):
         assert 0.4 < float(r["plant_height"]) < 0.6        # plants are 0.05-0.6 m tall
         assert 1.8 < float(r["row_projected_area"]) < 3.2  # 5.4 m x ~0.4-0.6 m
         assert 0.55 < float(r["height_max"]) < 0.65        # levelled to ground
+
+
+def test_row_direction_on_square_plot():
+    """Three short, wide rows at 70 deg in a square plot: PCA picks the wrong axis."""
+    rng = np.random.default_rng(1)
+    t = np.deg2rad(70)
+    along, across = np.array([np.cos(t), np.sin(t)]), np.array([-np.sin(t), np.cos(t)])
+    pts = []
+    for k in (-1, 0, 1):
+        s = rng.uniform(-1.2, 1.2, 20000)
+        w = k * 0.9 + rng.normal(0, 0.12, 20000)
+        pts.append(np.outer(s, along) + np.outer(w, across))
+    xy = np.vstack(pts)
+    est = P.estimate_row_direction(xy)
+    assert abs(abs(est @ along) - 1) < 1 - np.cos(np.deg2rad(1.0))
+    _, _, vt = np.linalg.svd(xy - xy.mean(0), full_matrices=False)
+    assert abs(vt[0] @ along) < 0.9  # PCA alone would be off here

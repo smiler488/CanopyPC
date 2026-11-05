@@ -12,7 +12,7 @@ I wrote it for field plots reconstructed from cross-circular oblique (CCO) UAV f
 1. **Ground removal** with the Cloth Simulation Filter (Zhang et al., 2016).
 2. **Levelling**: a RANSAC plane is fitted to the ground points, its normal is rotated onto +Z and the ground is shifted to z = 0, so heights are heights above the soil.
 3. **Cleaning**: statistical outlier removal, DBSCAN removal of small clusters, and removal of compact objects such as plot labels. An optional window lets you pick and delete leftovers by hand.
-4. **Row segmentation**: points are projected onto the axis perpendicular to the planting direction and split with 1-D K-means. The planting direction can be given or estimated by PCA.
+4. **Row segmentation**: points are projected onto the axis perpendicular to the planting direction and split with 1-D K-means. The planting direction can be given, or estimated by scanning angles for the one at which rows and inter-row gaps form the sharpest peaks (more robust than PCA on square plots).
 5. **Traits per row**, written to CSV.
 
 | Column | Meaning |
@@ -69,18 +69,26 @@ write_results_csv(res["all_results"], "plot_traits.csv")
 
 ## Sample data
 
-`data/sample/` holds three rows of one plot (`canopy_row_*.ply`) and the CSF cloth nodes for that plot (`cloth_nodes.txt`). They are enough to try the trait functions:
+`data/sample/` holds the canopy of one plot with three rows, split into three files (`canopy_row_*.ply`) by the equal-width cut of `scripts/quick_row_split.py`, and the CSF cloth nodes of that plot (`cloth_nodes.txt`). The equal-width cut does not follow the rows, so merge the files and let CanopyPC find the rows:
 
 ```python
 import numpy as np
 import open3d as o3d
-from process_point_cloud import row_traits, projected_area_xy
+from process_point_cloud import segment_major_rows, row_traits, projected_area_xy
 
-row = o3d.io.read_point_cloud("data/sample/canopy_row_1.ply")
-plot_area = projected_area_xy(np.asarray(row.points)) * 3
-traits, _ = row_traits(0, row, plot_area, n_rows=3)
-print(traits)
+pts = np.vstack([np.asarray(o3d.io.read_point_cloud(f"data/sample/canopy_row_{i}.ply").points)
+                 for i in (1, 2, 3)])
+pts -= pts.min(axis=0)
+canopy = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pts[pts[:, 2] > 0.08]))
+rows, _ = segment_major_rows(canopy, n_rows=3)
+plot_area = projected_area_xy(np.asarray(canopy.points))
+for i, row in rows:
+    print(row_traits(i, row, plot_area, n_rows=3)[0])
 ```
+
+![rows found in the sample plot](docs/rows_sample.png)
+
+On this plot the three rows are 0.45–0.55 m tall with 1.7–2.1 m² projected area each.
 
 ## Notes and limits
 
@@ -91,6 +99,7 @@ print(traits)
 ## Changes in this revision
 
 - Projected area was about twice the real value; fixed.
+- The planting direction was estimated by PCA, which follows the plot outline rather than the rows and cut across rows on near-square plots (the sample plot is one). It is now estimated from the row/gap pattern itself.
 - Clouds were flipped upside down when the fitted ground normal pointed down; fixed.
 - `canopy_area_ratio` now uses the actual number of rows instead of a fixed 3.
 - Command line interface, CSV export and switches to turn off the viewers.

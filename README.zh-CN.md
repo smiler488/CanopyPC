@@ -12,7 +12,7 @@ CanopyPC 把一个行播作物小区的无人机点云，转成按行统计的�
 1. **去地面**：布料模拟滤波 CSF（Zhang et al., 2016）。
 2. **调平**：对地面点做 RANSAC 平面拟合，把法向量旋到 +Z，并把地面平移到 z = 0，这样 z 就是离地高度。
 3. **去噪**：统计离群点剔除、DBSCAN 去小簇、去掉小区标牌这类紧凑物体。可选弹出窗口手动框选删除残留。
-4. **分行**：把点投影到垂直于播种方向的轴上，用一维 K-means 分行。播种方向可以手动给，也可以用 PCA 自动估计。
+4. **分行**：把点投影到垂直于播种方向的轴上，用一维 K-means 分行。播种方向可以手动指定，也可以自动估计：程序会扫描各个角度，找到行和行间空隙形成最尖锐峰谷的那个方向。在接近正方形的小区上，这比 PCA 可靠。
 5. **按行计算性状**并导出 CSV。
 
 | 列名 | 含义 |
@@ -69,18 +69,26 @@ write_results_csv(res["all_results"], "plot_traits.csv")
 
 ## 示例数据
 
-`data/sample/` 里是同一个小区的三行点云（`canopy_row_*.ply`）和该小区的 CSF 布料节点（`cloth_nodes.txt`），足够试一下性状计算函数：
+`data/sample/` 里是一个三行小区的冠层点云，被 `scripts/quick_row_split.py` 按等宽切成了三个文件（`canopy_row_*.ply`），另附该小区的 CSF 布料节点（`cloth_nodes.txt`）。等宽切法并不沿着行走，所以使用时先把三个文件合并，再让 CanopyPC 自己分行：
 
 ```python
 import numpy as np
 import open3d as o3d
-from process_point_cloud import row_traits, projected_area_xy
+from process_point_cloud import segment_major_rows, row_traits, projected_area_xy
 
-row = o3d.io.read_point_cloud("data/sample/canopy_row_1.ply")
-plot_area = projected_area_xy(np.asarray(row.points)) * 3
-traits, _ = row_traits(0, row, plot_area, n_rows=3)
-print(traits)
+pts = np.vstack([np.asarray(o3d.io.read_point_cloud(f"data/sample/canopy_row_{i}.ply").points)
+                 for i in (1, 2, 3)])
+pts -= pts.min(axis=0)
+canopy = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pts[pts[:, 2] > 0.08]))
+rows, _ = segment_major_rows(canopy, n_rows=3)
+plot_area = projected_area_xy(np.asarray(canopy.points))
+for i, row in rows:
+    print(row_traits(i, row, plot_area, n_rows=3)[0])
 ```
+
+![示例小区的分行结果](docs/rows_sample.png)
+
+这个小区的三行株高为 0.45–0.55 m，每行投影面积 1.7–2.1 m²。
 
 ## 注意事项
 
@@ -91,6 +99,7 @@ print(traits)
 ## 本次修订
 
 - 投影面积之前约为真实值的 2 倍，已修正。
+- 原来用 PCA 估计播种方向，但 PCA 找的是小区轮廓的长轴而不是行向，在接近正方形的小区上会斜着切过行（示例小区就是这种情况）。现在改为直接根据行和行间空隙的分布来估计。
 - 拟合出的地面法向量朝下时点云会被上下翻转，已修正。
 - `canopy_area_ratio` 改为按实际行数计算，不再写死为 3。
 - 新增命令行、CSV 导出和关闭可视化的开关。
