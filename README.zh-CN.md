@@ -2,6 +2,7 @@
 
 [English](README.md) | 中文
 
+[![CI](https://github.com/smiler488/CanopyPC/actions/workflows/test.yml/badge.svg)](https://github.com/smiler488/CanopyPC/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.9–3.12](https://img.shields.io/badge/Python_3.9%E2%80%933.12-informational)
 CanopyPC 把一个行播作物小区的无人机点云，转成按行统计的冠层性状表：株高、凸包体积、投影面积和包围盒尺寸。
 
 这个工具是我在处理无人机交叉环绕倾斜（CCO）航拍重建的田间小区时写的。每个小区有几行，同一个试验里每个小区都要算同一套结构性状，不想再一个个在 CloudCompare 里手动量。我的点云来自摄影测量重建，其他带米制坐标的 `.ply` 也可以用。

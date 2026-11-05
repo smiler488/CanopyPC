@@ -2,6 +2,7 @@
 
 English | [中文](README.zh-CN.md)
 
+[![CI](https://github.com/smiler488/CanopyPC/actions/workflows/test.yml/badge.svg)](https://github.com/smiler488/CanopyPC/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.9–3.12](https://img.shields.io/badge/Python_3.9%E2%80%933.12-informational)
 CanopyPC turns a UAV point cloud of a row-crop plot into a table of row-level canopy traits: plant height, convex-hull volume, projected area and bounding-box dimensions.
 
 I wrote it for field plots reconstructed from cross-circular oblique (CCO) UAV flights, where each plot holds a few rows and I needed the same structural traits for every plot of a trial without hand-measuring them in CloudCompare. The point clouds came from photogrammetry, but any `.ply` with metric coordinates works.
